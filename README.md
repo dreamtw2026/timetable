@@ -4,7 +4,7 @@
 
 本项目主要用于个人学习和日常课程安排，也开源出来供大家使用和参考。
 
-项目采用 **Cloudflare Workers + KV** 部署，课程数据保存在 Cloudflare KV 中
+项目采用 **Cloudflare Workers + KV** 部署，课程数据保存在KV数据库中
 
 > 💡 本项目参考了 B 站 UP 主「二叉树树」进行AI Coding
 
