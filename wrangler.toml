@@ -1,0 +1,11 @@
+name = "my-timetable"
+main = "index.js"
+compatibility_date = "2026-07-18"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[[kv_namespaces]]
+binding = "TIMETABLE_DB" #KV空间名
+id = "" # 这里换成Cloudflare KV的 ID
