@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>你的课程表</title>
+
+  <!-- 🌐 添加网站显示图标（与后台保持一致） -->
+  <link rel="icon" href="" type="image/x-icon">
+
+  <style>
+    /* ==========================================================
+       【明暗模式核心变量追加】
+       ========================================================== */
+    :root {
+      --bg-color: #0b0b0c;
+      --text-color: #e4e4e7;
+      --panel-bg: #18181b;
+      --border-color: #27272a;
+      --text-muted: #a1a1aa;
+      --text-sub: #71717a;
+      --empty-cell-color: #27272a;
+      --mobile-row-bg: rgba(255, 255, 255, 0.01);
+      --mobile-no-class: #3f3f46;
+      --spinner-bg: #000000bd;
+    }
+
+    [data-theme="light"] {
+      --bg-color: #ffffff;
+      --text-color: #18181b;
+      --panel-bg: #f4f4f5;
+      --border-color: #e4e4e7;
+      --text-muted: #71717a;
+      --text-sub: #a1a1aa;
+      --empty-cell-color: #e4e4e7;
+      --mobile-row-bg: rgba(0, 0, 0, 0.02);
+      --mobile-no-class: #a1a1aa;
+      --spinner-bg: #ffffffbd;
+    }
+
+    /* ==========================================================
+       【零改动保留】你原本的所有专属 UI 样式（仅将颜色改为变量联动）
+       ========================================================== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-color); color: var(--text-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px; display: flex; flex-direction: column; align-items: center;
+      transition: background-color 0.25s, color 0.25s; /* 平滑过渡 */
+    }
+    .header-container {
+      width: 100%; max-width: 1200px; margin-bottom: 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    
+    /* 找回头像/timetable 专属排版 */
+    .title-area { display: flex; align-items: center; gap: 10px; } 
+    .nav-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border-color); }
+    .nav-divider { color: var(--text-sub); font-size: 16px; font-weight: 300; }
+    .nav-logo-text { font-size: 18px; font-weight: 700; color: var(--text-color); letter-spacing: -0.5px; margin-right: 4px; }
+    
+    .term-select {
+      background-color: var(--panel-bg); color: var(--text-color); border: 1px solid var(--border-color);
+      padding: 8px 12px; border-radius: 8px; font-size: 13px; outline: none; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .term-select:focus { border-color: #3b82f6; }
+    
+    /* 状态 Banner */
+    .current-course-banner { width: 100%; max-width: 1200px; margin-bottom: 20px; min-height: 60px; }
+    .current-banner-content {
+      background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px;
+      padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; border-left: 5px solid var(--text-color);
+      animation: fadeIn 0.3s ease-in-out;
+      transition: background-color 0.25s, border-color 0.25s;
+    }
+    @media (min-width: 768px) {
+      .current-banner-content { flex-direction: row; justify-content: space-between; align-items: center; }
+    }
+    
+    .status-in-class { color: #3b82f6; font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+    .status-no-class { color: #ef4444; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .current-meta { font-size: 12px; color: var(--text-muted); }
+    
+    /* 课表容器与淡入动画 */
+    .timetable-container { width: 100%; max-width: 1200px; position: relative; }
+    .fade-loading { opacity: 0.4; pointer-events: none; filter: blur(1px); }
+    .timetable-wrapper { transition: all 0.25s ease-in-out; }
+
+    /* --- PC / iPad 横屏网格 --- */
+    .timetable-grid { 
+      display: grid; 
+      grid-template-columns: 80px repeat(5, 1fr); 
+      gap: 10px; 
+      background-color: var(--panel-bg);
+      border-radius: 16px; padding: 16px; border: 1px solid var(--border-color);
+      align-items: stretch; 
+      transition: background-color 0.25s, border-color 0.25s;
+    }
+    .grid-header { color: var(--text-muted); font-size: 13px; font-weight: 600; padding-bottom: 6px; text-align: center; }
+    .period-sidebar { display: flex; flex-direction: column; justify-content: center; min-height: 75px; text-align: center; }
+    .period-title { font-size: 12px; font-weight: 700; color: var(--text-color); }
+    .period-time { font-size: 10px; color: var(--text-sub); margin-top: 2px; }
+    .empty-cell { display: flex; align-items: center; justify-content: center; color: var(--empty-cell-color); min-height: 75px; font-size: 12px; }
+    
+    .course-card {
+      border-radius: 10px; padding: 10px; 
+      min-height: 75px; 
+      display: flex; flex-direction: column;
+      justify-content: flex-start; gap: 4px; 
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    .course-name { font-size: 12px; font-weight: 700; line-height: 1.3; color: var(--text-color) !important; }
+    .course-info { font-size: 11px; color: var(--text-muted); line-height: 1.4; }
+
+    /* --- 移动端 / 竖屏自适应布局 --- */
+    @media (max-width: 767px) {
+      .timetable-grid { display: none; }
+      .mobile-day-section { background-color: var(--panel-bg); border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1px solid var(--border-color); transition: background-color 0.25s, border-color 0.25s;}
+      .mobile-day-title { font-size: 14px; font-weight: 700; color: #3b82f6; margin-bottom: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 4px; }
+      .mobile-course-row { display: flex; gap: 10px; margin-bottom: 8px; padding: 8px; background: var(--mobile-row-bg); border-radius: 8px; }
+      .mobile-time-col { min-width: 70px; font-size: 11px; color: var(--text-sub); display: flex; flex-direction: column; justify-content: center; }
+      .mobile-info-col { flex-grow: 1; }
+      .mobile-no-class { font-size: 12px; color: var(--mobile-no-class); padding: 2px 0; }
+    }
+    
+    @media (min-width: 768px) {
+      .mobile-timetable { display: none; }
+    }
+
+    /* 全局加载等待指示器 */
+    .loading-spinner {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      font-size: 13px; color: #3b82f6; background: var(--spinner-bg); padding: 8px 16px;
+      border-radius: 20px; border: 1px solid var(--border-color); display: none; z-index: 10;
+    }
+
+    .admin-btn { font-size: 12px; color: var(--text-sub); text-decoration: none; margin-top: 20px; transition: color 0.2s; }
+    .admin-btn:hover { color: var(--text-color); }
+    
+    /* 专属追加：独立切换按钮样式 */
+    .theme-toggle-btn {
+      background: none; border: 1px solid var(--border-color); cursor: pointer; 
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; 
+      color: var(--text-color); transition: all 0.2s;
+    }
+    .theme-toggle-btn:hover { background-color: var(--panel-bg); border-color: #3b82f6; }
+    .theme-icon { width: 16px; height: 16px; fill: currentColor; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
+</head>
+<body>
+
+  <div class="header-container">
+    <!-- 原味找回：头像/timetable 设计 -->
+    <div class="title-area">
+      <img src="" alt="Avatar" class="nav-avatar">
+      <span class="nav-divider">/</span>
+      <span class="nav-logo-text">timetable</span>
+      <!-- 独立且融合的明暗切换按钮 -->
+      <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="切换主题">
+        <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24"></svg>
+      </button>
+    </div>
+    
+    <select class="term-select" id="termSelect" onchange="loadTimetable()"></select>
+  </div>
+
+  <div class="current-course-banner" id="current-course-banner"></div>
+
+  <div class="timetable-container">
+    <div class="loading-spinner" id="globalSpinner">⚡ 正在同步课表数据...</div>
+    
+    <div class="timetable-wrapper" id="timetableWrapper">
+      <!-- PC/iPad 网格 -->
+      <div class="timetable-grid" id="timetable">
+        <div class="grid-header">节次</div>
+        <div class="grid-header">周一</div><div class="grid-header">周二</div><div class="grid-header">周三</div><div class="grid-header">周四</div><div class="grid-header">周五</div>
+      </div>
+      
+      <!-- 手机端列表 -->
+      <div class="mobile-timetable" id="mobileTimetable"></div>
+    </div>
+  </div>
+
+  <a href="/admin.html" class="admin-btn">⚙️ 进入后台管理</a>
+
+  <script>
+    // ==========================================================
+    // 【全新追加】明暗模式初始化及切换逻辑（本地缓存支持）
+    // ==========================================================
+    const sunIcon = `<path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41zM7.05 18.01c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41z"/>`;
+    const moonIcon = `<path d="M12.3 22h-.1c-5.5 0-10-4.5-10-10 0-4.8 3.5-8.9 8.2-9.8.6-.1 1.2.3 1.3.9.1.6-.2 1.2-.8 1.4-3.4 1-5.7 4.1-5.7 7.6 0 4.4 3.6 8 8 8 3.5 0 6.6-2.3 7.6-5.7.2-.6.8-.9 1.4-.8.6.1 1 .7.9 1.3-.9 4.7-5 8.1-9.8 8.1z"/>`;
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.getElementById('themeIcon').innerHTML = savedTheme === 'dark' ? moonIcon : sunIcon;
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      document.getElementById('themeIcon').innerHTML = newTheme === 'dark' ? moonIcon : sunIcon;
+    }
+
+    // ==========================================================
+    // 【全新修正】严格按最新时间表配置的 periods 映射表
+    // ==========================================================
+    const periods = [
+      { id: 1, name: "1-2 节", time: "08:00-09:40", start: "08:00", end: "09:40" },
+      { id: 2, name: "3-4 节", time: "10:00-11:40", start: "10:00", end: "11:40" },
+      { id: 3, name: "5-6 节", time: "13:20-15:00", start: "13:20", end: "15:00" },
+      { id: 4, name: "7-8 节", time: "15:20-17:00", start: "15:20", end: "17:00" },
+      { id: 5, name: "9-10 节", time: "18:00-19:40", start: "18:00", end: "19:40" },
+      { id: 6, name: "第 11 节", time: "19:50-20:35", start: "19:50", end: "20:35" }
+    ];
+
+    const weekDays = [{ id: 1, name: "周一" }, { id: 2, name: "周二" }, { id: 3, name: "周三" }, { id: 4, name: "周四" }, { id: 5, name: "周五" }];
+    const allTerms = [
+      { value: "freshman-1", text: "大一上" }, { value: "freshman-2", text: "大一下" },
+      { value: "sophomore-1", text: "大二上" }, { value: "sophomore-2", text: "大二下" },
+      { value: "junior-1", text: "大三上" }, { value: "junior-2", text: "大三下" },
+      { value: "senior-1", text: "大四上" }, { value: "senior-2", text: "大四下" }
+    ];
+
+    let globalCourses = [];
+
+    function updateCurrentCourseStatus() {
+      const now = new Date();
+      const currentDay = now.getDay(); 
+      const dayLookup = currentDay === 0 ? 7 : currentDay;
+      const banner = document.getElementById('current-course-banner');
+
+      if (dayLookup > 5) { return renderNoClassStatus(banner); }
+
+      const currentTimeString = now.toTimeString().substring(0, 5); 
+      const currentCourse = globalCourses.find(c => {
+        const p = periods.find(p => p.id === c.period);
+        return c.day === dayLookup && p && currentTimeString >= p.start && currentTimeString <= p.end;
+      });
+
+      if (currentCourse) {
+        const pInfo = periods.find(p => p.id === currentCourse.period);
+        banner.innerHTML = `
+          <div class="current-banner-content" style="border-left-color: #3b82f6; background-color: #1d4ed808;">
+            <div class="status-in-class"><span>🔵 正在上课中：</span><span style="color: var(--text-color)">${currentCourse.name} 📚</span></div>
+            <div class="current-meta">⏱️ ${pInfo.time} | 教室：${currentCourse.room} | 教师：${currentCourse.teacher}</div>
+          </div>`;
+      } else {
+        renderNoClassStatus(banner);
+      }
+    }
+
+    function renderNoClassStatus(container) {
+      container.innerHTML = `
+        <div class="current-banner-content" style="border-left-color: #ef4444; background-color: #dc262608;">
+          <div class="status-no-class"><span>🔴 当前处于休息时间，暂无进行中的课程 ~ ☕</span></div>
+          <div class="current-meta">记得合理安排课余时间哦 🌟</div>
+        </div>`;
+    }
+
+    async function initTermSelector() {
+      const selectEl = document.getElementById('termSelect');
+      let hasValidTerm = false;
+      
+      toggleLoading(true);
+
+      for (const term of allTerms) {
+        try {
+          const response = await fetch(`/api/courses?term=${term.value}`);
+          const courses = await response.json();
+          if (courses && courses.length > 0) {
+            const option = document.createElement('option');
+            option.value = term.value; option.text = term.text;
+            selectEl.appendChild(option);
+            hasValidTerm = true;
+          }
+        } catch(e) {}
+      }
+
+      if (!hasValidTerm) {
+        const option = document.createElement('option');
+        option.value = "freshman-1"; option.text = "大一上 (未配置)";
+        selectEl.appendChild(option);
+      }
+      
+      loadTimetable();
+    }
+
+    async function loadTimetable() {
+      toggleLoading(true);
+      const term = document.getElementById('termSelect').value;
+      
+      try {
+        const response = await fetch(`/api/courses?term=${term}`);
+        globalCourses = await response.json();
+        
+        setTimeout(() => {
+          updateCurrentCourseStatus();
+          renderPCGrid();
+          renderMobileList();
+          toggleLoading(false);
+        }, 150);
+      } catch (err) {
+        toggleLoading(false);
+      }
+    }
+
+    function toggleLoading(isLoading) {
+      const wrapper = document.getElementById('timetableWrapper');
+      const spinner = document.getElementById('globalSpinner');
+      if (isLoading) {
+        wrapper.classList.add('fade-loading');
+        spinner.style.display = 'block';
+      } else {
+        wrapper.classList.remove('fade-loading');
+        spinner.style.display = 'none';
+      }
+    }
+
+    function renderPCGrid() {
+      const container = document.getElementById('timetable');
+      const headers = container.querySelectorAll('.grid-header');
+      container.innerHTML = '';
+      headers.forEach(h => container.appendChild(h));
+
+      periods.forEach(period => {
+        container.insertAdjacentHTML('beforeend', `<div class="period-sidebar"><div class="period-title">${period.name}</div><div class="period-time">${period.time}</div></div>`);
+        for (let day = 1; day <= 5; day++) {
+          const course = globalCourses.find(c => c.day === day && c.period === period.id);
+          if (course) {
+            container.insertAdjacentHTML('beforeend', `
+              <div class="course-card" style="background-color: ${course.color}0c; border-left: 3px solid ${course.color};">
+                <div class="course-name">${course.name}</div>
+                <div class="course-info">
+                  <div>教室：${course.room}</div>
+                  <div>教师：${course.teacher}</div>
+                </div>
+              </div>`);
+          } else {
+            container.insertAdjacentHTML('beforeend', '<div class="empty-cell">—</div>');
+          }
+        }
+      });
+    }
+
+    function renderMobileList() {
+      const mContainer = document.getElementById('mobileTimetable');
+      mContainer.innerHTML = '';
+
+      weekDays.forEach(day => {
+        let dayHtml = `<div class="mobile-day-section"><div class="mobile-day-title">${day.name}</div>`;
+        const dayCourses = globalCourses.filter(c => c.day === day.id).sort((a,b) => a.period - b.period);
+
+        if(dayCourses.length === 0) {
+          dayHtml += `<div class="mobile-no-class">☕ 今天没有排课，轻松一下！</div>`;
+        } else {
+          dayCourses.forEach(c => {
+            const pInfo = periods.find(p => p.id === c.period);
+            dayHtml += `
+              <div class="mobile-course-row" style="border-left: 3px solid ${c.color};">
+                <div class="mobile-time-col">
+                  <strong>${pInfo.name}</strong>
+                  <span>${pInfo.time}</span>
+                </div>
+                <div class="mobile-info-col">
+                  <div class="course-name">${c.name}</div>
+                  <div class="course-info">教室：${c.room}<br>教师：${c.teacher}</div>
+                </div>
+              </div>`;
+          });
+        }
+        dayHtml += `</div>`;
+        mContainer.insertAdjacentHTML('beforeend', dayHtml);
+      });
+    }
+
+    // 初始化运行
+    initTheme();
+    initTermSelector();
+    setInterval(updateCurrentCourseStatus, 30000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard</title>
+
+  <!-- 🌐 添加网站显示图标（与后台保持一致） -->
+  <link rel="icon" href="" type="image/x-icon">
+  
+  <style>
+    /* ==========================================================
+       【明暗模式核心变量定义】
+       ========================================================== */
+    :root {
+      --bg-color: #0b0b0c;
+      --text-color: #e4e4e7;
+      --panel-bg: #18181b;
+      --border-color: #27272a;
+      --text-muted: #a1a1aa;
+      --text-sub: #71717a;
+      --input-bg: #0b0b0c;
+      --input-color: #fff;
+      --table-row-hover: rgba(255, 255, 255, 0.02);
+    }
+
+    [data-theme="light"] {
+      --bg-color: #ffffff;
+      --text-color: #18181b;
+      --panel-bg: #f4f4f5;
+      --border-color: #e4e4e7;
+      --text-muted: #71717a;
+      --text-sub: #a1a1aa;
+      --input-bg: #ffffff;
+      --input-color: #18181b;
+      --table-row-hover: rgba(0, 0, 0, 0.02);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-color); color: var(--text-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      padding: 20px; display: flex; flex-direction: column; align-items: center;
+      transition: background-color 0.25s, color 0.25s; /* 平滑过渡 */
+    }
+    .admin-container { width: 100%; max-width: 1000px; position: relative; }
+    
+    .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+    .title-group { display: flex; align-items: center; gap: 12px; }
+    .header-area h1 { font-size: 24px; font-weight: 700; }
+    .back-btn { color: #3b82f6; text-decoration: none; font-size: 14px; cursor: pointer; }
+    
+    /* 密码锁遮罩屏 */
+    .lock-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(11, 11, 12, 0.95);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      z-index: 999; backdrop-filter: blur(4px);
+    }
+    .lock-card { background: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 30px; width: 340px; text-align: center; color: #e4e4e7; }
+    .lock-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; }
+    
+    .manager-layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
+    @media (min-width: 850px) {
+      .manager-layout { grid-template-columns: 320px 1fr; }
+    }
+    
+    .card { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; transition: background-color 0.25s, border-color 0.25s; }
+    .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-color); }
+    
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .form-control {
+      width: 100%; background-color: var(--input-bg); color: var(--input-color); border: 1px solid var(--border-color);
+      padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; transition: border-color 0.2s, background-color 0.25s, color 0.25s;
+    }
+    .form-control:focus { border-color: #3b82f6; }
+    .form-control:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .pwd-control { width: 100%; background-color: #0b0b0c; color: #fff; border: 1px solid #27272a; padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; text-align: center; }
+    .pwd-control:focus { border-color: #3b82f6; }
+
+    .color-pick-wrapper { display: flex; gap: 8px; align-items: center; }
+    .color-input { width: 40px; height: 32px; padding: 0; border: none; background: transparent; cursor: pointer; }
+    
+    .btn {
+      width: 100%; background-color: #3b82f6; color: #fff; border: none; padding: 10px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+    }
+    .btn:hover { background-color: #2563eb; }
+    .btn:disabled { background-color: var(--border-color); color: var(--text-sub); cursor: not-allowed; }
+    
+    .table-responsive { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    th { color: var(--text-muted); font-weight: 600; padding: 12px 8px; border-bottom: 1px solid var(--border-color); }
+    td { padding: 12px 8px; border-bottom: 1px solid var(--border-color); color: var(--text-color); vertical-align: middle; transition: color 0.25s, border-color 0.25s; }
+    tr:hover td { background-color: var(--table-row-hover); }
+    
+    .badge-color {
+      display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px;
+      vertical-align: middle; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .action-btn-group { display: flex; gap: 8px; }
+    .btn-action { background: none; border: none; font-size: 12px; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+    .btn-edit { color: #3b82f6; background-color: #3b82f61a; }
+    .btn-edit:hover { background-color: #3b82f633; }
+    .btn-del { color: #ef4444; background-color: #ef44441a; }
+    .btn-del:hover { background-color: #ef444433; }
+    
+    .empty-tip { color: var(--text-sub); text-align: center; padding: 30px 0; font-size: 13px; }
+
+    /* 同款明暗切换按钮样式 */
+    .theme-toggle-btn {
+      background: none; border: 1px solid var(--border-color); cursor: pointer; 
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; 
+      color: var(--text-color); transition: all 0.2s;
+    }
+    .theme-toggle-btn:hover { background-color: var(--panel-bg); border-color: #3b82f6; }
+    .theme-icon { width: 16px; height: 16px; fill: currentColor; }
+  </style>
+</head>
+<body>
+
+  <!-- 独立密码锁面板 -->
+  <div class="lock-overlay" id="lockOverlay">
+    <div class="lock-card">
+      <div class="lock-title">🔒 管理员身份验证</div>
+      <input type="password" id="passwordInput" class="pwd-control" placeholder="请输入后台管理密码" style="margin-bottom:15px;" onkeydown="if(event.key==='Enter') verifyPassword()">
+      <button class="btn" onclick="verifyPassword()">确认进入</button>
+      <a href="/index.html" class="back-btn" style="display:inline-block; margin-top:15px;">取消并返回首页</a>
+    </div>
+  </div>
+
+  <div class="admin-container">
+    <div class="header-area">
+      <div class="title-group">
+        <h1>课程表后台管理 ⚙️</h1>
+        <!-- 引入明暗模式切换按钮 -->
+        <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="切换主题">
+          <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24"></svg>
+        </button>
+      </div>
+      <a onclick="exitToHome()" class="back-btn">⬅️ 安全退出并返回首页</a>
+    </div>
+
+    <div class="manager-layout">
+      <!-- 左侧：表单 -->
+      <div class="card">
+        <div class="card-title" id="formTitle">添加新课程</div>
+        <form id="courseForm" onsubmit="saveCourse(event)">
+          <input type="hidden" id="courseId">
+          
+          <div class="form-group">
+            <label>学期学段</label>
+            <select class="form-control" id="courseTerm" required onchange="loadAdminCourses()" disabled>
+              <option value="freshman-1">大一上</option><option value="freshman-2">大一下</option>
+              <option value="sophomore-1">大二上</option><option value="sophomore-2">大二下</option>
+              <option value="junior-1">大三上</option><option value="junior-2">大三下</option>
+              <option value="senior-1">大四上</option><option value="senior-2">大四下</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>课程名称</label>
+            <input type="text" class="form-control" id="courseName" placeholder="例如：高等数学" required disabled>
+          </div>
+
+          <div class="form-group">
+            <label>上课星期</label>
+            <select class="form-control" id="courseDay" required disabled>
+              <option value="1">星期一</option><option value="2">星期二</option>
+              <option value="3">星期三</option><option value="4">星期四</option>
+              <option value="5">星期五</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>上课节次</label>
+            <select class="form-control" id="coursePeriod" required disabled>
+              <option value="1">1-2 节 (08:00-09:40)</option>
+              <option value="2">3-4 节 (10:00-11:40)</option>
+              <option value="3">5-6 节 (13:20-15:00)</option>
+              <option value="4">7-8 节 (15:20-16:05)</option>
+              <option value="5">9-10 节 (18:00-19:40)</option>
+              <option value="6">第 11 节 (19:50-20:35)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>上课教室</label>
+            <input type="text" class="form-control" id="courseRoom" placeholder="例如：教三 302" required disabled>
+          </div>
+
+          <div class="form-group">
+            <label>任课教师</label>
+            <input type="text" class="form-control" id="courseTeacher" placeholder="例如：张老师" required disabled>
+          </div>
+
+          <div class="form-group">
+            <label>卡片主题色（左侧边框色）</label>
+            <div class="color-pick-wrapper">
+              <input type="color" class="color-input" id="courseColor" value="#3b82f6" disabled>
+              <input type="text" class="form-control" id="courseColorText" value="#3b82f6" style="flex-grow:1;" oninput="document.getElementById('courseColor').value=this.value" disabled>
+            </div>
+          </div>
+
+          <button type="submit" class="btn" id="submitBtn" disabled>确认添加</button>
+          <button type="button" class="btn" id="cancelBtn" style="background-color:#27272a; margin-top:8px; display:none;" onclick="resetForm()">取消编辑</button>
+        </form>
+      </div>
+
+      <!-- 右侧：当前学期课程列表 -->
+      <div class="card">
+        <div class="card-title">当前学期课程明细</div>
+        <div class="table-responsive">
+          <table>
+            <thead>
+              <tr>
+                <th>课程名称</th>
+                <th>时间安排</th>
+                <th>教室</th>
+                <th>教师</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="courseTableBody"></tbody>
+          </table>
+          <div id="emptyTip" class="empty-tip" style="display: none;">当前学期空空如也，快去左侧添加课程吧 ~ ☕</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ⚠️ 请在这里修改你的后台管理密码
+    const ADMIN_PASSWORD = ""; 
+
+    // ==========================================================
+    // 【全新追加】明暗模式初始化及切换逻辑（与首页共用本地缓存记录）
+    // ==========================================================
+    const sunIcon = `<path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41zM7.05 18.01c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41z"/>`;
+    const moonIcon = `<path d="M12.3 22h-.1c-5.5 0-10-4.5-10-10 0-4.8 3.5-8.9 8.2-9.8.6-.1 1.2.3 1.3.9.1.6-.2 1.2-.8 1.4-3.4 1-5.7 4.1-5.7 7.6 0 4.4 3.6 8 8 8 3.5 0 6.6-2.3 7.6-5.7.2-.6.8-.9 1.4-.8.6.1 1 .7.9 1.3-.9 4.7-5 8.1-9.8 8.1z"/>`;
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+      document.getElementById('themeIcon').innerHTML = savedTheme === 'dark' ? moonIcon : sunIcon;
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+      document.getElementById('themeIcon').innerHTML = newTheme === 'dark' ? moonIcon : sunIcon;
+    }
+
+    const dayNames = ["", "周一", "周二", "周三", "周四", "周五"];
+    const periodNames = ["", "1-2 节", "3-4 节", "5-6 节", "7-8 节", "9-10 节", "11 节"];
+    
+    document.getElementById('courseColor').addEventListener('input', (e) => {
+      document.getElementById('courseColorText').value = e.target.value;
+    });
+
+    let adminCourses = [];
+
+    // --- 密码锁验证逻辑 ---
+    function checkAuth() {
+      const isAuthed = sessionStorage.getItem('admin_authenticated');
+      if (isAuthed === 'true') {
+        document.getElementById('lockOverlay').style.display = 'none';
+        enableFormControls(true);
+        loadAdminCourses();
+      } else {
+        document.getElementById('lockOverlay').style.display = 'flex';
+        enableFormControls(false);
+      }
+    }
+
+    function verifyPassword() {
+      const input = document.getElementById('passwordInput').value;
+      if (input === ADMIN_PASSWORD) {
+        sessionStorage.setItem('admin_authenticated', 'true');
+        document.getElementById('lockOverlay').style.display = 'none';
+        enableFormControls(true);
+        loadAdminCourses();
+      } else {
+        alert("密码错误，拒绝访问！");
+      }
+    }
+
+    function enableFormControls(enable) {
+      const controls = document.querySelectorAll('.form-control, .color-input, #submitBtn');
+      controls.forEach(ctrl => {
+        if (enable) ctrl.removeAttribute('disabled');
+        else ctrl.setAttribute('disabled', 'true');
+      });
+    }
+
+    function exitToHome() {
+      sessionStorage.removeItem('admin_authenticated');
+      window.location.href = '/index.html';
+    }
+
+    // --- 核心业务逻辑 ---
+    async function loadAdminCourses() {
+      if (sessionStorage.getItem('admin_authenticated') !== 'true') return;
+      const term = document.getElementById('courseTerm').value;
+      const tbody = document.getElementById('courseTableBody');
+      const tip = document.getElementById('emptyTip');
+      tbody.innerHTML = '';
+      
+      try {
+        const response = await fetch(`/api/courses?term=${term}`);
+        adminCourses = await response.json();
+        
+        if (!adminCourses || adminCourses.length === 0) {
+          tip.style.display = 'block';
+          return;
+        }
+        tip.style.display = 'none';
+
+        adminCourses.sort((a, b) => a.day === b.day ? a.period - b.period : a.day - b.day);
+
+        adminCourses.forEach(c => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>
+              <span class="badge-color" style="background-color: ${c.color}"></span>
+              <strong>${c.name}</strong>
+            </td>
+            <td>${dayNames[c.day]} 第 ${periodNames[c.period]}</td>
+            <td>${c.room}</td>
+            <td>${c.teacher}</td>
+            <td>
+              <div class="action-btn-group">
+                <button class="btn-action btn-edit" onclick="editCourse('${c.id}')">编辑</button>
+                <button class="btn-action btn-del" onclick="deleteCourse('${c.id}')">删除</button>
+              </div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch(e) {
+        alert("同步数据失败，可能被广告插件拦截，请关闭拦截后重试！");
+      }
+    }
+
+    function editCourse(id) {
+      const course = adminCourses.find(c => String(c.id) === String(id));
+      if (!course) {
+        alert("未找到该课程数据，请刷新重试");
+        return;
+      }
+
+      document.getElementById('courseId').value = course.id;
+      document.getElementById('courseName').value = course.name;
+      document.getElementById('courseDay').value = course.day;
+      document.getElementById('coursePeriod').value = course.period;
+      document.getElementById('courseRoom').value = course.room;
+      document.getElementById('courseTeacher').value = course.teacher;
+      document.getElementById('courseColor').value = course.color;
+      document.getElementById('courseColorText').value = course.color;
+
+      document.getElementById('formTitle').innerText = "编辑课程项目";
+      document.getElementById('submitBtn').innerText = "保存修改";
+      document.getElementById('cancelBtn').style.display = "block";
+      
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    async function saveCourse(e) {
+      e.preventDefault();
+      if (sessionStorage.getItem('admin_authenticated') !== 'true') return;
+      
+      const id = document.getElementById('courseId').value;
+      const term = document.getElementById('courseTerm').value;
+      
+      const payload = {
+        name: document.getElementById('courseName').value,
+        day: parseInt(document.getElementById('courseDay').value),
+        period: parseInt(document.getElementById('coursePeriod').value),
+        weeks: "1-16", 
+        room: document.getElementById('courseRoom').value,
+        teacher: document.getElementById('courseTeacher').value,
+        color: document.getElementById('courseColor').value
+      };
+
+      const url = id ? `/api/courses?term=${term}&id=${id}` : `/api/courses?term=${term}`;
+      const method = id ? 'PUT' : 'POST';
+
+      try {
+        const res = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          resetForm();
+          loadAdminCourses();
+        } else {
+          const err = await res.text();
+          alert("保存失败，后端提示：" + err);
+        }
+      } catch (err) {
+        alert("网络请求失败，请稍后重试");
+      }
+    }
+
+    async function deleteCourse(id) {
+      if (sessionStorage.getItem('admin_authenticated') !== 'true') return;
+      if (!confirm("确定要删除这门课程吗？动作不可逆哦。")) return;
+      const term = document.getElementById('courseTerm').value;
+
+      try {
+        const res = await fetch(`/api/courses?term=${term}&id=${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          loadAdminCourses();
+        } else {
+          alert("删除失败");
+        }
+      } catch (e) {
+        alert("网络请求错误");
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('courseId').value = "";
+      document.getElementById('courseName').value = "";
+      document.getElementById('courseRoom').value = "";
+      document.getElementById('courseTeacher').value = "";
+      
+      document.getElementById('formTitle').innerText = "添加新课程";
+      document.getElementById('submitBtn').innerText = "确认添加";
+      document.getElementById('cancelBtn').style.display = "none";
+    }
+
+    // 初始化运行
+    initTheme();
+    checkAuth();
+  </script>
+</body>
+</html>
