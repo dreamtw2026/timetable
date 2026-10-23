@@ -1,5 +1,7 @@
 # 📚 课程表 (my-timetable)
 
+demo:https://cf-class.07210d00.kdns.fr/
+
 基于 **Cloudflare Workers + KV** 的轻量级大学课程表应用：课表展示页 + 后台管理页 + 课程 CRUD API，全部跑在一个 Worker 上，无需服务器、无需数据库。
 
 ---
