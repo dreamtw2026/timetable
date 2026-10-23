@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard</title>
+  <title>课程表 · 后台管理</title>
 
-  <!-- 🌐 添加网站显示图标（与后台保持一致） -->
-  <link rel="icon" href="" type="image/x-icon">
+  <!-- 🌐 网站图标（内联 SVG，无需外部文件） -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%85%3C/text%3E%3C/svg%3E">
   
   <style>
     /* ==========================================================
@@ -22,6 +22,9 @@
       --input-bg: #0b0b0c;
       --input-color: #fff;
       --table-row-hover: rgba(255, 255, 255, 0.02);
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --overlay-bg: rgba(11, 11, 12, 0.6);
     }
 
     [data-theme="light"] {
@@ -34,6 +37,7 @@
       --input-bg: #ffffff;
       --input-color: #18181b;
       --table-row-hover: rgba(0, 0, 0, 0.02);
+      --overlay-bg: rgba(255, 255, 255, 0.68);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -41,59 +45,80 @@
       background-color: var(--bg-color); color: var(--text-color);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       padding: 20px; display: flex; flex-direction: column; align-items: center;
-      transition: background-color 0.25s, color 0.25s; /* 平滑过渡 */
+      transition: background-color 0.4s, color 0.4s; /* 平滑过渡 */
     }
     .admin-container { width: 100%; max-width: 1000px; position: relative; }
     
     .header-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
     .title-group { display: flex; align-items: center; gap: 12px; }
     .header-area h1 { font-size: 24px; font-weight: 700; }
-    .back-btn { color: #3b82f6; text-decoration: none; font-size: 14px; cursor: pointer; }
+    .back-btn { color: var(--accent); text-decoration: none; font-size: 14px; cursor: pointer; }
     
-    /* 密码锁遮罩屏 */
+    /* 密码锁遮罩屏：跟随主题的毛玻璃效果 */
     .lock-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background-color: rgba(11, 11, 12, 0.95);
+      background-color: var(--overlay-bg);
+      transition: background-color 0.4s;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      z-index: 999; backdrop-filter: blur(4px);
+      z-index: 999; backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
     }
-    .lock-card { background: #18181b; border: 1px solid #27272a; border-radius: 12px; padding: 30px; width: 340px; text-align: center; color: #e4e4e7; }
-    .lock-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; }
+    .lock-card {
+      background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 16px;
+      padding: 34px 30px 30px; width: 360px; text-align: center; color: var(--text-color);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+      transition: background-color 0.4s, border-color 0.4s;
+    }
+    .lock-brand { font-size: 32px; line-height: 1; margin-bottom: 12px; }
+    .lock-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+    .lock-sub { font-size: 12px; color: var(--text-sub); margin-bottom: 20px; }
+    .lock-card .pwd-control:focus { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
     
     .manager-layout { display: grid; grid-template-columns: 1fr; gap: 20px; }
     @media (min-width: 850px) {
       .manager-layout { grid-template-columns: 320px 1fr; }
     }
     
-    .card { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; transition: background-color 0.25s, border-color 0.25s; }
+    .card { background-color: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; transition: background-color 0.4s, border-color 0.4s; }
     .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text-color); }
     
     .form-group { margin-bottom: 14px; }
     .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
     .form-control {
       width: 100%; background-color: var(--input-bg); color: var(--input-color); border: 1px solid var(--border-color);
-      padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; transition: border-color 0.2s, background-color 0.25s, color 0.25s;
+      padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; transition: border-color 0.3s, background-color 0.4s, color 0.4s;
     }
-    .form-control:focus { border-color: #3b82f6; }
+    .form-control:focus { border-color: var(--accent); }
     .form-control:disabled { opacity: 0.5; cursor: not-allowed; }
     
-    .pwd-control { width: 100%; background-color: #0b0b0c; color: #fff; border: 1px solid #27272a; padding: 8px 12px; border-radius: 6px; font-size: 13px; outline: none; text-align: center; }
-    .pwd-control:focus { border-color: #3b82f6; }
+    .pwd-control {
+      width: 100%; background-color: var(--input-bg); color: var(--input-color); border: 1px solid var(--border-color);
+      padding: 11px 12px; border-radius: 8px; font-size: 13px; outline: none; text-align: center;
+      transition: border-color 0.3s, box-shadow 0.3s, background-color 0.4s, color 0.4s;
+    }
+    .pwd-control:focus { border-color: var(--accent); }
+
+    /* 课程周次徽章 */
+    .weeks-chip {
+      display: inline-block; font-size: 11px; color: var(--text-sub);
+      background: var(--table-row-hover); border: 1px solid var(--border-color);
+      border-radius: 999px; padding: 1px 8px; margin-top: 3px;
+    }
 
     .color-pick-wrapper { display: flex; gap: 8px; align-items: center; }
     .color-input { width: 40px; height: 32px; padding: 0; border: none; background: transparent; cursor: pointer; }
     
     .btn {
-      width: 100%; background-color: #3b82f6; color: #fff; border: none; padding: 10px;
-      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+      width: 100%; background-color: var(--accent); color: #fff; border: none; padding: 10px;
+      border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 0.3s;
     }
-    .btn:hover { background-color: #2563eb; }
+    .btn:hover { background-color: var(--accent-hover); }
     .btn:disabled { background-color: var(--border-color); color: var(--text-sub); cursor: not-allowed; }
     
     .table-responsive { width: 100%; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
     th { color: var(--text-muted); font-weight: 600; padding: 12px 8px; border-bottom: 1px solid var(--border-color); }
-    td { padding: 12px 8px; border-bottom: 1px solid var(--border-color); color: var(--text-color); vertical-align: middle; transition: color 0.25s, border-color 0.25s; }
+    td { padding: 12px 8px; border-bottom: 1px solid var(--border-color); color: var(--text-color); vertical-align: middle; transition: color 0.4s, border-color 0.4s; }
     tr:hover td { background-color: var(--table-row-hover); }
     
     .badge-color {
@@ -109,15 +134,77 @@
     
     .empty-tip { color: var(--text-sub); text-align: center; padding: 30px 0; font-size: 13px; }
 
-    /* 同款明暗切换按钮样式 */
-    .theme-toggle-btn {
-      background: none; border: 1px solid var(--border-color); cursor: pointer; 
-      width: 32px; height: 32px; border-radius: 8px;
-      display: flex; align-items: center; justify-content: center; 
-      color: var(--text-color); transition: all 0.2s;
+    /* 系统开启"减少动态效果"时基本禁用动画，减轻视觉负担 */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+      }
     }
-    .theme-toggle-btn:hover { background-color: var(--panel-bg); border-color: #3b82f6; }
-    .theme-icon { width: 16px; height: 16px; fill: currentColor; }
+
+    /* 日/夜主题拨杆：太阳渐变旋钮，勾选后变月亮 + 夜空星星 */
+    .daynight { position: relative; display: inline-block; width: 48px; height: 24px; flex-shrink: 0; cursor: pointer; }
+    .daynight input { display: none; }
+    .daynight .slider {
+      position: absolute; inset: 0; border-radius: 999px;
+      background: linear-gradient(180deg, #64b5f6, #b3e0fc);
+      box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.18);
+      transition: background 0.4s;
+    }
+    .daynight .slider::before {
+      content: ""; position: absolute; width: 20px; height: 20px; left: 2px; top: 2px;
+      border-radius: 50%;
+      background: linear-gradient(40deg, #ff0080, #ff8c00 70%);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      transition: transform 0.4s, background 0.4s, box-shadow 0.4s;
+    }
+    .daynight .slider::after {
+      content: ""; position: absolute; top: 5px; left: 7px; width: 2px; height: 2px;
+      border-radius: 50%; background: #fff; opacity: 0; transition: opacity 0.4s;
+      box-shadow: 6px 3px 0 #fff, 11px 1px 0 #fff, 16px 5px 0 #fff;
+    }
+    .daynight input:checked + .slider { background: #303136; }
+    .daynight input:checked + .slider::before {
+      transform: translateX(24px);
+      background: #303136;
+      box-shadow: inset -3px -2px 5px -2px #8983f7, inset -10px -4px 0 0 #a3dafb;
+    }
+    .daynight input:checked + .slider::after { opacity: 0.85; }
+
+    /* 飞书提醒表情开关：暂停=灰底圆嘴，运行=绿底笑脸（切换时旋钮 Y 轴翻转一周） */
+    .face-toggle { position: relative; display: inline-block; width: 54px; height: 28px; flex-shrink: 0; }
+    .face-toggle input { display: none; }
+    .face-toggle .track {
+      position: absolute; inset: 0; border-radius: 999px;
+      background: linear-gradient(40deg, #9aa5b1, #7b8794);
+      box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.25), 0 -2px 4px rgba(0, 0, 0, 0.12);
+      transition: background 0.4s;
+    }
+    .face-toggle .knob {
+      position: absolute; top: 2px; left: 2px; width: 24px; height: 24px; border-radius: 50%;
+      background: #fff;
+      box-shadow: inset 0.5px -1px 1px rgba(0, 0, 0, 0.35), 0 2px 4px rgba(0, 0, 0, 0.25);
+      transition: transform 0.6s, left 0.4s;
+    }
+    .face-toggle .knob::before {
+      content: "· ·"; position: absolute; top: 4px; left: 0; right: 0;
+      text-align: center; font-size: 11px; font-weight: 700; color: #4a4a4a; line-height: 1; letter-spacing: 1px;
+    }
+    .face-toggle .knob::after {
+      position: absolute; bottom: 4px; left: 0; right: 0; margin: auto;
+      width: 7px; height: 3px; content: "●";
+      text-align: center; font-size: 7px; color: #4a4a4a; line-height: 1;
+    }
+    .face-toggle input:checked + .track { background: linear-gradient(40deg, #2bd2a0, #0fb9b1); }
+    .face-toggle input:checked + .track .knob {
+      left: 28px;
+      transform: rotateY(360deg);
+    }
+    .face-toggle input:checked + .track .knob::after {
+      content: ""; width: 9px; height: 5px;
+      border: 1.6px solid #4a4a4a; border-top: none; border-radius: 0 0 10px 10px;
+    }
+    .face-toggle input:disabled + .track { opacity: 0.5; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -125,7 +212,9 @@
   <!-- 独立密码锁面板 -->
   <div class="lock-overlay" id="lockOverlay">
     <div class="lock-card">
-      <div class="lock-title">🔒 管理员身份验证</div>
+      <div class="lock-brand">📅</div>
+      <div class="lock-title">管理员身份验证</div>
+      <div class="lock-sub">请输入后台管理密码以继续</div>
       <input type="password" id="passwordInput" class="pwd-control" placeholder="请输入后台管理密码" style="margin-bottom:15px;" onkeydown="if(event.key==='Enter') verifyPassword()">
       <button class="btn" onclick="verifyPassword()">确认进入</button>
       <a href="/index.html" class="back-btn" style="display:inline-block; margin-top:15px;">取消并返回首页</a>
@@ -137,9 +226,10 @@
       <div class="title-group">
         <h1>课程表后台管理 ⚙️</h1>
         <!-- 引入明暗模式切换按钮 -->
-        <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="切换主题">
-          <svg class="theme-icon" id="themeIcon" viewBox="0 0 24 24"></svg>
-        </button>
+        <label class="daynight" title="切换明暗主题" aria-label="切换明暗主题">
+          <input type="checkbox" id="themeToggle" onchange="toggleTheme(this.checked)">
+          <span class="slider"></span>
+        </label>
       </div>
       <a onclick="exitToHome()" class="back-btn">⬅️ 安全退出并返回首页</a>
     </div>
@@ -147,18 +237,30 @@
     <div class="manager-layout">
       <!-- 左侧：表单 -->
       <div class="card">
+        <div class="form-group" style="padding-bottom: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--border-color);">
+          <label>本学期开学日期（第 1 周周一）</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="date" class="form-control" id="termStartDate" disabled>
+            <button type="button" class="btn" id="saveDateBtn" style="width: auto; padding: 0 16px; flex-shrink: 0;" onclick="saveStartDate()" disabled>保存</button>
+          </div>
+        </div>
+        <div class="form-group" style="padding-bottom: 16px; margin-bottom: 18px; border-bottom: 1px solid var(--border-color);">
+          <label>飞书课前提醒</label>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <span id="notifyState" style="font-size: 12px; color: var(--text-muted);">—</span>
+            <label class="face-toggle" style="margin-left: auto;" title="暂停/恢复飞书提醒">
+              <input type="checkbox" id="notifyToggleInput" onchange="toggleNotify(this.checked)">
+              <span class="track"><span class="knob"></span></span>
+            </label>
+          </div>
+        </div>
         <div class="card-title" id="formTitle">添加新课程</div>
         <form id="courseForm" onsubmit="saveCourse(event)">
           <input type="hidden" id="courseId">
           
           <div class="form-group">
             <label>学期学段</label>
-            <select class="form-control" id="courseTerm" required onchange="loadAdminCourses()" disabled>
-              <option value="freshman-1">大一上</option><option value="freshman-2">大一下</option>
-              <option value="sophomore-1">大二上</option><option value="sophomore-2">大二下</option>
-              <option value="junior-1">大三上</option><option value="junior-2">大三下</option>
-              <option value="senior-1">大四上</option><option value="senior-2">大四下</option>
-            </select>
+            <select class="form-control" id="courseTerm" required onchange="loadAdminCourses(); loadTermMeta()" disabled></select>
           </div>
 
           <div class="form-group">
@@ -181,10 +283,15 @@
               <option value="1">1-2 节 (08:00-09:40)</option>
               <option value="2">3-4 节 (10:00-11:40)</option>
               <option value="3">5-6 节 (13:20-15:00)</option>
-              <option value="4">7-8 节 (15:20-16:05)</option>
+              <option value="4">7-8 节 (15:20-17:00)</option>
               <option value="5">9-10 节 (18:00-19:40)</option>
               <option value="6">第 11 节 (19:50-20:35)</option>
             </select>
+          </div>
+
+          <div class="form-group">
+            <label>上课周次</label>
+            <input type="text" class="form-control" id="courseWeeks" value="1-16" placeholder="如 1-16、5 或 1-8,10-16" required disabled>
           </div>
 
           <div class="form-group">
@@ -206,7 +313,7 @@
           </div>
 
           <button type="submit" class="btn" id="submitBtn" disabled>确认添加</button>
-          <button type="button" class="btn" id="cancelBtn" style="background-color:#27272a; margin-top:8px; display:none;" onclick="resetForm()">取消编辑</button>
+          <button type="button" class="btn" id="cancelBtn" style="background-color: var(--border-color); color: var(--text-color); margin-top:8px; display:none;" onclick="resetForm()">取消编辑</button>
         </form>
       </div>
 
@@ -233,37 +340,52 @@
   </div>
 
   <script>
-    // ⚠️ 请在这里修改你的后台管理密码
-    const ADMIN_PASSWORD = ""; 
+    // ⚠️ 请在这里修改你的后台管理密码（空字符串 = 无需密码）
+    const ADMIN_PASSWORD = "";
 
     // ==========================================================
     // 【全新追加】明暗模式初始化及切换逻辑（与首页共用本地缓存记录）
     // ==========================================================
-    const sunIcon = `<path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0s-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41l-1.06-1.06zm1.06-12.37c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41zM7.05 18.01c-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06c.39-.38.39-1.02 0-1.41z"/>`;
-    const moonIcon = `<path d="M12.3 22h-.1c-5.5 0-10-4.5-10-10 0-4.8 3.5-8.9 8.2-9.8.6-.1 1.2.3 1.3.9.1.6-.2 1.2-.8 1.4-3.4 1-5.7 4.1-5.7 7.6 0 4.4 3.6 8 8 8 3.5 0 6.6-2.3 7.6-5.7.2-.6.8-.9 1.4-.8.6.1 1 .7.9 1.3-.9 4.7-5 8.1-9.8 8.1z"/>`;
 
     function initTheme() {
       const savedTheme = localStorage.getItem('theme') || 'dark';
       document.documentElement.setAttribute('data-theme', savedTheme);
-      document.getElementById('themeIcon').innerHTML = savedTheme === 'dark' ? moonIcon : sunIcon;
+      const toggle = document.getElementById('themeToggle');
+      if (toggle) toggle.checked = savedTheme === 'dark';
     }
 
-    function toggleTheme() {
-      const currentTheme = document.documentElement.getAttribute('data-theme');
-      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', newTheme);
-      localStorage.setItem('theme', newTheme);
-      document.getElementById('themeIcon').innerHTML = newTheme === 'dark' ? moonIcon : sunIcon;
+    function toggleTheme(checked) {
+      const theme = checked ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
     }
 
     const dayNames = ["", "周一", "周二", "周三", "周四", "周五"];
     const periodNames = ["", "1-2 节", "3-4 节", "5-6 节", "7-8 节", "9-10 节", "11 节"];
+
+    // 学年制学期列表（与首页、后端保持一致）：4 个学年 × 每学年 2 学期
+    const ACADEMIC_YEARS = ['2026-2027', '2027-2028', '2028-2029', '2029-2030'];
+    ACADEMIC_YEARS.flatMap(y => [1, 2].map(s => ({ v: `${y}-${s}`, t: `${y}学年第${s}学期` })))
+      .forEach(o => {
+        const opt = document.createElement('option');
+        opt.value = o.v; opt.text = o.t;
+        document.getElementById('courseTerm').appendChild(opt);
+      });
     
     document.getElementById('courseColor').addEventListener('input', (e) => {
       document.getElementById('courseColorText').value = e.target.value;
     });
 
     let adminCourses = [];
+
+    const WEEKS_RE = /^\d+(-\d+)?(,\d+(-\d+)?)*$/;
+
+    // HTML 转义，防止课程信息中的特殊字符破坏页面
+    function esc(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[ch]));
+    }
 
     // --- 密码锁验证逻辑 ---
     function checkAuth() {
@@ -272,6 +394,8 @@
         document.getElementById('lockOverlay').style.display = 'none';
         enableFormControls(true);
         loadAdminCourses();
+        loadTermMeta();
+        loadNotifyState();
       } else {
         document.getElementById('lockOverlay').style.display = 'flex';
         enableFormControls(false);
@@ -285,13 +409,15 @@
         document.getElementById('lockOverlay').style.display = 'none';
         enableFormControls(true);
         loadAdminCourses();
+        loadTermMeta();
+        loadNotifyState();
       } else {
         alert("密码错误，拒绝访问！");
       }
     }
 
     function enableFormControls(enable) {
-      const controls = document.querySelectorAll('.form-control, .color-input, #submitBtn');
+      const controls = document.querySelectorAll('.form-control, .color-input, #submitBtn, #saveDateBtn, #notifyToggleInput');
       controls.forEach(ctrl => {
         if (enable) ctrl.removeAttribute('disabled');
         else ctrl.setAttribute('disabled', 'true');
@@ -327,12 +453,12 @@
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td>
-              <span class="badge-color" style="background-color: ${c.color}"></span>
-              <strong>${c.name}</strong>
+              <span class="badge-color" style="background-color: ${esc(c.color)}"></span>
+              <strong>${esc(c.name)}</strong>
             </td>
-            <td>${dayNames[c.day]} 第 ${periodNames[c.period]}</td>
-            <td>${c.room}</td>
-            <td>${c.teacher}</td>
+            <td>${dayNames[c.day]} 第 ${periodNames[c.period]}<br><span class="weeks-chip">${esc(c.weeks || '1-16')}周</span></td>
+            <td>${esc(c.room)}</td>
+            <td>${esc(c.teacher)}</td>
             <td>
               <div class="action-btn-group">
                 <button class="btn-action btn-edit" onclick="editCourse('${c.id}')">编辑</button>
@@ -358,6 +484,7 @@
       document.getElementById('courseName').value = course.name;
       document.getElementById('courseDay').value = course.day;
       document.getElementById('coursePeriod').value = course.period;
+      document.getElementById('courseWeeks').value = course.weeks || "1-16";
       document.getElementById('courseRoom').value = course.room;
       document.getElementById('courseTeacher').value = course.teacher;
       document.getElementById('courseColor').value = course.color;
@@ -377,11 +504,17 @@
       const id = document.getElementById('courseId').value;
       const term = document.getElementById('courseTerm').value;
       
+      const weeks = document.getElementById('courseWeeks').value.replace(/\s/g, '');
+      if (weeks && !WEEKS_RE.test(weeks)) {
+        alert("周次格式不合法，示例：1-16、5 或 1-8,10-16");
+        return;
+      }
+
       const payload = {
         name: document.getElementById('courseName').value,
         day: parseInt(document.getElementById('courseDay').value),
         period: parseInt(document.getElementById('coursePeriod').value),
-        weeks: "1-16", 
+        weeks: weeks || "1-16",
         room: document.getElementById('courseRoom').value,
         teacher: document.getElementById('courseTeacher').value,
         color: document.getElementById('courseColor').value
@@ -426,11 +559,92 @@
       }
     }
 
+    // --- 开学日期（第 1 周周一）---
+    async function loadTermMeta() {
+      if (sessionStorage.getItem('admin_authenticated') !== 'true') return;
+      const term = document.getElementById('courseTerm').value;
+      try {
+        const response = await fetch(`/api/meta?term=${term}`);
+        const data = await response.json();
+        document.getElementById('termStartDate').value = data.startDate || '';
+      } catch (e) {
+        document.getElementById('termStartDate').value = '';
+      }
+    }
+
+    async function saveStartDate() {
+      if (sessionStorage.getItem('admin_authenticated') !== 'true') return;
+      const term = document.getElementById('courseTerm').value;
+      const value = document.getElementById('termStartDate').value;
+
+      try {
+        const res = await fetch(`/api/meta?term=${term}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ startDate: value || null })
+        });
+        if (res.ok) {
+          alert('开学日期已保存');
+        } else {
+          alert("保存失败，后端提示：" + await res.text());
+        }
+      } catch (e) {
+        alert("网络请求失败，请稍后重试");
+      }
+    }
+
+    // --- 飞书提醒手动开关（checked = 运行中）---
+    let notifyPaused = false;
+
+    function renderNotifyState() {
+      const input = document.getElementById('notifyToggleInput');
+      if (input) input.checked = !notifyPaused;
+      const el = document.getElementById('notifyState');
+      el.textContent = notifyPaused ? '已暂停' : '运行中';
+      el.style.color = notifyPaused ? 'var(--amber)' : 'var(--text-muted)';
+    }
+
+    async function loadNotifyState() {
+      if (sessionStorage.getItem('admin_authenticated') !== 'true') return;
+      try {
+        const response = await fetch('/api/notify');
+        const data = await response.json();
+        notifyPaused = !!data.paused;
+        renderNotifyState();
+      } catch (e) {
+        document.getElementById('notifyState').textContent = '状态读取失败';
+      }
+    }
+
+    async function toggleNotify(checked) {
+      const target = !checked; // checked = 运行中，即 paused = !checked
+
+      try {
+        const res = await fetch('/api/notify', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ paused: target })
+        });
+        if (res.ok) {
+          notifyPaused = target;
+        }
+        // 无论成功与否都把拨杆回正到实际状态
+        renderNotifyState();
+        if (!res.ok) {
+          alert("操作失败，后端提示：" + await res.text());
+        }
+      } catch (e) {
+        renderNotifyState();
+        alert("网络请求失败，请稍后重试");
+      }
+    }
+
     function resetForm() {
       document.getElementById('courseId').value = "";
       document.getElementById('courseName').value = "";
       document.getElementById('courseRoom').value = "";
       document.getElementById('courseTeacher').value = "";
+      document.getElementById('courseWeeks').value = "1-16";
       
       document.getElementById('formTitle').innerText = "添加新课程";
       document.getElementById('submitBtn').innerText = "确认添加";

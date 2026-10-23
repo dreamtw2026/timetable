@@ -1,0 +1,19 @@
+# ===== 本地运行产物（含真实账号与课表数据，勿提交）=====
+.wrangler/
+dev.log
+.dev.vars
+.env
+
+# ===== AI 编程工具的会话/索引数据 =====
+.codeartsdoer/
+.zcode/
+.zcodeignore
+.merkle-snapshot.json
+
+# ===== 依赖与系统文件 =====
+node_modules/
+package-lock.json
+
+# ===== 编辑器 =====
+.vscode/
+.idea/
